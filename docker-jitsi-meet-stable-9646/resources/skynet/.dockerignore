@@ -1,0 +1,10 @@
+.gitignore
+.idea
+.pytest_cache
+.venv
+.env
+.env.sample
+.coverage
+Dockerfile
+README.md
+test_coverage_reports/

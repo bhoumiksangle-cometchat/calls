@@ -1,0 +1,87 @@
+[tool.poetry]
+name = "skynet"
+version = "2026.4.1"
+authors = ["Jitsi Team <team@jitsi.org>"]
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
+[tool.poetry.group.dev.dependencies]
+argparse = "^1.4.0"
+autoflake = "^2.3.1"
+black = "23.12.1"
+llmcompressor = "^0.3.0"
+poetry-githooks = "^3.0.0"
+usort = "^1.0.7"
+
+[tool.poetry.group.test.dependencies]
+pytest = "7.4.4"
+pytest-asyncio = "0.23.3"
+pytest-mock = "3.12.0"
+
+[tool.poetry.group.vllm]
+optional = true
+
+[tool.poetry.group.vllm.dependencies]
+vllm = "0.7.3"
+
+[tool.poetry.dependencies]
+aioboto3 = "14.3.0"
+async-timeout = ">=4.0.3"
+aiofiles = "24.1.0"
+aiohttp = "3.11.18"
+async-lru = "2.0.5"
+av = "^12.3.0"
+beautifulsoup4 = "4.13.4"
+ctranslate2 = "4.4.0"
+einops = "^0.8.1"
+faiss-cpu = "1.11.0"
+fake-useragent = "2.2.0"
+fastapi = "0.115.12"
+fastapi-versionizer = "4.0.1"
+faster-whisper = "~1.2.0"
+flashrank = "^0.2.10"
+kreuzberg = "3.1.4"
+langchain = "1.2.15"
+langchain-community = "0.4.1"
+langchain-huggingface = "1.2.1"
+langchain-openai = "1.1.12"
+oci = "2.151.0"
+prometheus-client = "0.21.1"
+prometheus-fastapi-instrumentator = "7.1.0"
+pybase64 = "1.4.1"
+pydantic = "2.11.4"
+pyjwt = {version = "2.10.1", extras = ["crypto"]}
+pypdf = "5.4.0"
+python = "~3.11"
+python-multipart = "0.0.20"
+redis = "6.1.0"
+sentence-transformers = "^3.4.1"
+silero-vad = "~6.0"
+torch = "2.5.1"
+torchaudio = "2.5.1"
+transformers = "4.51.1"
+uuid6 = "2024.07.10"
+uvicorn = {extras = ["standard"], version = "^0.38.0"}
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+skip-string-normalization = 1
+
+[tool.usort]
+categories = ["future", "standard_library", "numpy", "third_party", "first_party"]
+default_category = "third_party"
+excludes = [
+    "skynet/modules/stt/streaming_whisper/models/"
+]
+
+[tool.usort.known]
+first_party = ["skynet"]
+
+[tool.githooks]
+pre-commit = "sh lint.sh && sh sync-requirements.sh"
