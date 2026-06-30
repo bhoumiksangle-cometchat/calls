@@ -1,0 +1,20 @@
+# GPU override for Skynet, for an AWS g4dn.xlarge (NVIDIA T4).
+# Layer this LAST so it overrides the CPU settings in skynet.yml:
+#   docker compose -f docker-compose.yml -f skynet.yml -f skynet.gpu.yml up -d
+#
+# Requires: the GPU image built as skynet-gpu:local, and the host to have
+# NVIDIA drivers + nvidia-container-toolkit (the AWS Deep Learning AMI has both).
+services:
+  skynet:
+    image: skynet-gpu:local
+    environment:
+      - WHISPER_DEVICE=cuda
+      - WHISPER_COMPUTE_TYPE=float16   # T4 has no native BF16; float16 is right
+      - WHISPER_MODEL_NAME=small.en    # GPU is fast; bump up from tiny.en for accuracy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

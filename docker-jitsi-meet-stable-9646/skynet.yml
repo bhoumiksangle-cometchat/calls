@@ -1,0 +1,79 @@
+# Live transcription via Skynet (streaming Whisper) + a dedicated transcriber Jigasi.
+#
+# Adds, on top of the base docker-compose.yml stack:
+#   - skynet:            CPU-only Faster-Whisper websocket server (built locally as skynet-cpu:local)
+#   - jigasi-transcriber: a jigasi at stable-9753 (which has WhisperTranscriptionService),
+#                         run in transcriber mode, that streams meeting audio to Skynet.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f skynet.yml up -d
+#
+# jigasi-transcriber uses the published jitsi/jigasi:stable-9753 image directly (it does not
+# build from the stock ./jigasi dir), and no SIP gateway is needed for transcription. jicofo
+# owns the jigasi brewery the transcriber joins as long as JIGASI_SIP_URI is set in .env.
+services:
+
+    # ---- Skynet: streaming Whisper (live transcription), CPU-only ----
+    skynet:
+        image: skynet-cpu:local
+        restart: ${RESTART_POLICY:-unless-stopped}
+        environment:
+            - ENABLED_MODULES=streaming_whisper
+            - BYPASS_AUTHORIZATION=true          # no JWT; jigasi connects directly
+            - WHISPER_MODEL_NAME=tiny.en         # small + fast for CPU; swap for base.en/small.en if you want
+            - WHISPER_DEVICE=cpu
+            - WHISPER_COMPUTE_TYPE=int8          # CPU-friendly quantization
+            - BEAM_SIZE=1
+            - WHISPER_MODEL_PATH=/models/streaming-whisper
+        volumes:
+            - skynet-models:/models              # caches the downloaded Whisper model
+        # Internal access (jigasi -> ws://skynet:8000) needs no host port.
+        # Mapped to host 8009 only for debugging/inspection.
+        ports:
+            - '127.0.0.1:8009:8000'
+        networks:
+            meet.jitsi:
+
+    # ---- Dedicated transcriber Jigasi (newer image, transcriber mode) ----
+    jigasi-transcriber:
+        image: jitsi/jigasi:stable-9753
+        restart: ${RESTART_POLICY:-unless-stopped}
+        environment:
+            - JIGASI_MODE=transcriber
+            - ENABLE_TRANSCRIPTIONS=1
+            # XMPP topology (matches the stable-9646 prosody)
+            - XMPP_SERVER=xmpp.meet.jitsi
+            - XMPP_DOMAIN=meet.jitsi
+            - XMPP_AUTH_DOMAIN=auth.meet.jitsi
+            - XMPP_INTERNAL_MUC_DOMAIN=internal-muc.meet.jitsi
+            - XMPP_MUC_DOMAIN=muc.meet.jitsi
+            # transcriber conference account lives on auth.meet.jitsi (registered in prosody)
+            - XMPP_RECORDER_DOMAIN=auth.meet.jitsi
+            - JIGASI_TRANSCRIBER_USER=transcriber
+            - JIGASI_TRANSCRIBER_PASSWORD=${JIGASI_TRANSCRIBER_PASSWORD}
+            # brewery control connection (jigasi@auth) — shares the SIP jigasi's password
+            - JIGASI_XMPP_PASSWORD=${JIGASI_XMPP_PASSWORD}
+            # point the transcriber at Skynet's streaming-whisper websocket
+            - JIGASI_TRANSCRIBER_CUSTOM_SERVICE=org.jitsi.jigasi.transcription.WhisperTranscriptionService
+            - JIGASI_TRANSCRIBER_WHISPER_URL=ws://skynet:8000/streaming-whisper/ws
+            # jigasi always signs a JWT before connecting; Skynet bypasses auth and
+            # ignores it, but jigasi still needs a key to sign with.
+            - JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY_NAME=${JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY_NAME}
+            - JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY=${JIGASI_TRANSCRIBER_WHISPER_PRIVATE_KEY}
+            # The newer template points the conference XMPP account at PUBLIC_URL
+            # (localhost:8443 = the container itself). Override it to the internal
+            # prosody so the transcriber can actually join meeting rooms.
+            - JIGASI_CONFIGURATION=org.jitsi.jigasi.xmpp.acc.SERVER_ADDRESS=xmpp.meet.jitsi
+            - PUBLIC_URL=https://localhost:8443
+            - TZ=UTC
+        depends_on:
+            - prosody
+            - skynet
+        networks:
+            meet.jitsi:
+
+volumes:
+    skynet-models:
+
+networks:
+    meet.jitsi:
