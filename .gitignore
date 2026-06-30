@@ -1,6 +1,6 @@
 # Local clone of jitsi/skynet — build dependency for skynet-cpu:local,
 # not vendored here. See docker-jitsi-meet-stable-9646/CUSTOM-SETUP.md.
-/skynet/
+
 
 # Backup of the removed soundboard + SIP-mock work (kept locally, not part of the project).
 /_removed/
